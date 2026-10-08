@@ -2,21 +2,7 @@ import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
-import type { User } from '@/app/lib/definitions';
-import bcrypt from 'bcrypt';
-import postgres from 'postgres';
-
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
- 
-async function getUser(email: string): Promise<User | undefined> {
-  try {
-    const user = await sql<User[]>`SELECT * FROM users WHERE email=${email}`;
-    return user[0];
-  } catch (error) {
-    console.error('Failed to fetch user:', error);
-    throw new Error('Failed to fetch user.');
-  }
-}
+import { createAnonClient } from '@/lib/supabase/anon';
 
 export const { auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -26,18 +12,35 @@ export const { auth, signIn, signOut } = NextAuth({
         const parsedCredentials = z
           .object({ email: z.string().email(), password: z.string().min(6) })
           .safeParse(credentials);
- 
-        if (parsedCredentials.success) {
-          const { email, password } = parsedCredentials.data;
-          const user = await getUser(email);
-          if (!user) return null;
-          const passwordsMatch = await bcrypt.compare(password, user.password);
 
-          if (passwordsMatch) return user;
+        if (!parsedCredentials.success) return null;
+
+        const { email, password } = parsedCredentials.data;
+
+        // Authenticate against Supabase Auth (auth.users), not the public users table.
+        const supabase = createAnonClient();
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error || !data.session) {
+          console.log('Invalid credentials:', error?.message);
+          return null;
         }
- 
-        console.log('Invalid credentials');
-        return null;
+
+        // Returning the Supabase session tokens lets the jwt callback store
+        // them, so server-side Supabase queries run as this user (RLS / auth.uid()).
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name ?? email,
+          supabaseSession: {
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            expires_at: data.session.expires_at,
+          },
+        };
       },
     }),
   ],

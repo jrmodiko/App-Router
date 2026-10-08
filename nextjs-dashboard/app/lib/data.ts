@@ -8,6 +8,7 @@ import {
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
+import { createClient } from '@/lib/supabase/server';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
@@ -216,4 +217,131 @@ export async function fetchFilteredCustomers(query: string) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
   }
+}
+
+
+
+export type Patient = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone: string | null;
+  date_of_birth: string | null;
+  file_path: string | null;
+  created_at: string;
+};
+
+export async function fetchPatients(): Promise<Patient[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('patients')
+    .select('id, user_id, full_name, phone, date_of_birth, file_path, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error('Failed to fetch patients.');
+  }
+  return data as Patient[];
+}
+
+export async function fetchPatientById(id: string): Promise<Patient | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('patients')
+    .select('id, user_id, full_name, phone, date_of_birth, file_path, created_at')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error('Failed to fetch patient.');
+  }
+  return (data as Patient | null) ?? null;
+}
+
+export interface AppointmentRow {
+  id: string
+  starts_at: string
+  status: 'booked' | 'done' | 'no_show'
+  patients: { full_name: string } | null
+}
+
+export async function fetchAppointments(): Promise<AppointmentRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id, starts_at, status, patients ( full_name )')
+    .order('starts_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  // PostgREST returns a to-one relation as an object, but the untyped client
+  // infers it as an array, so go through unknown to reach our row shape.
+  return data as unknown as AppointmentRow[]
+}
+
+export async function fetchPatientOptions(): Promise<{ id: string; full_name: string }[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('patients').select('id, full_name').order('full_name')
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function fetchAppointmentById(id: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('appointments')
+    .select('id, patient_id, starts_at, status')
+    .eq('id', id)
+    .single()
+  return data
+}
+
+
+export interface StatusRow {
+  status: 'booked' | 'done' | 'no_show'
+  total: number
+}
+
+export async function fetchAppointmentStatusThisMonth(): Promise<StatusRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('appointment_status_this_month').select('status, total')
+  if (error) throw new Error(error.message)
+  return data as StatusRow[]
+}
+
+export interface PatientsPerMonthRow {
+  month: string
+  count: number
+}
+
+export async function fetchPatientsPerMonth(): Promise<PatientsPerMonthRow[]> {
+  const supabase = await createClient()
+
+  const start = new Date()
+  start.setDate(1)
+  start.setHours(0, 0, 0, 0)
+  start.setMonth(start.getMonth() - 5)
+
+  const { data, error } = await supabase
+    .from('patients')
+    .select('created_at')
+    .gte('created_at', start.toISOString())
+  if (error) throw new Error(error.message)
+
+  const buckets = new Map<string, PatientsPerMonthRow>()
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1)
+    buckets.set(`${d.getFullYear()}-${d.getMonth()}`, {
+      month: d.toLocaleString('en-ZA', { month: 'short', year: 'numeric' }),
+      count: 0,
+    })
+  }
+
+  for (const { created_at } of data ?? []) {
+    const d = new Date(created_at)
+    const bucket = buckets.get(`${d.getFullYear()}-${d.getMonth()}`)
+    if (bucket) bucket.count += 1
+  }
+
+  return [...buckets.values()]
 }
