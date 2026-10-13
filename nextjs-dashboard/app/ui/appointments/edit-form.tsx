@@ -1,3 +1,6 @@
+import Link from 'next/link';
+import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { Button } from '@/app/ui/button';
 import { updateAppointment } from '@/app/lib/actions'
 import { toDateTimeLocal } from '@/app/lib/time'
 
@@ -17,26 +20,63 @@ export default function EditAppointmentForm({
 }) {
   const update = updateAppointment.bind(null, appointment.id)
   return (
-    <form action={update} className="space-y-4">
-      <label htmlFor="patient_id">Patient</label>
-      <select id="patient_id" name="patient_id" defaultValue={appointment.patient_id} required>
-        <option value="" disabled>Select a patient</option>
-        {patients.map((p) => (
-          <option key={p.id} value={p.id}>{p.full_name}</option>
-        ))}
-      </select>
+    <form action={update}>
+      <div className="rounded-md bg-gray-50 p-4 md:p-6">
+        <div className="mb-4">
+          <label htmlFor="patient_id" className="mb-2 block text-sm font-medium">Patient</label>
+          <div className="relative">
+            <select
+              id="patient_id"
+              name="patient_id"
+              defaultValue={appointment.patient_id}
+              required
+              className="peer block w-full cursor-pointer rounded-md border border-gray-200 bg-white py-2 pl-10 text-sm outline-2"
+            >
+              <option value="" disabled>Select a patient</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.id}>{p.full_name}</option>
+              ))}
+            </select>
+            <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
+          </div>
+        </div>
 
-      <label htmlFor="starts_at">Starts at</label>
-      <input id="starts_at" type="datetime-local" name="starts_at" defaultValue={toDateTimeLocal(appointment.starts_at)} required />
+        <div className="mb-4">
+          <label htmlFor="starts_at" className="mb-2 block text-sm font-medium">Starts at</label>
+          <input
+            id="starts_at"
+            type="datetime-local"
+            name="starts_at"
+            defaultValue={toDateTimeLocal(appointment.starts_at)}
+            required
+            className="block w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm"
+          />
+        </div>
 
-      <label htmlFor="status">Status</label>
-      <select id="status" name="status" defaultValue={appointment.status}>
-        <option value="booked">Booked</option>
-        <option value="done">Done</option>
-        <option value="no_show">No-show</option>
-      </select>
+        <div className="mb-4">
+          <label htmlFor="status" className="mb-2 block text-sm font-medium">Status</label>
+          <select
+            id="status"
+            name="status"
+            defaultValue={appointment.status}
+            className="block w-full cursor-pointer rounded-md border border-gray-200 bg-white py-2 px-3 text-sm"
+          >
+            <option value="booked">Booked</option>
+            <option value="done">Done</option>
+            <option value="no_show">No-show</option>
+          </select>
+        </div>
+      </div>
 
-      <button type="submit">Save appointment</button>
+      <div className="mt-6 flex justify-end gap-4">
+        <Link
+          href="/dashboard/appointments"
+          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+        >
+          Cancel
+        </Link>
+        <Button type="submit">Save appointment</Button>
+      </div>
     </form>
   )
 }

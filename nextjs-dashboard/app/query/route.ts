@@ -4,9 +4,9 @@ const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 async function listInvoices() {
 	const data = await sql`
-    SELECT invoices.amount, customers.name
+    SELECT invoices.amount, patients.full_name
     FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
+    JOIN patients ON invoices.patient_id = patients.id
     WHERE invoices.amount = 666;
   `;
 

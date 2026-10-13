@@ -5,7 +5,12 @@ import { lusitana } from '@/app/ui/fonts';
 import { Suspense } from 'react';
 import CardWrapper from '@/app/ui/dashboard/cards';
 import { RevenueChartSkeleton, LatestInvoicesSkeleton, CardsSkeleton, } from '@/app/ui/skeletons';
- 
+
+// The cards, revenue chart and latest invoices all depend on who is logged in
+// (owner sees the whole practice, staff only their own patients), so this page
+// must render on every request instead of being prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
 
   return (

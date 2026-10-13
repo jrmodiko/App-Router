@@ -7,15 +7,16 @@ import { auth, signIn } from '@/auth';
 import { AuthError } from 'next-auth';
 import { createClient } from '@/lib/supabase/server';
 import { fromDateTimeLocal } from '@/app/lib/time'
+import { getSessionContext, appointmentScope } from '@/app/lib/data';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string({
-    invalid_type_error: 'Please select a customer.',
+  patientId: z.string({
+    invalid_type_error: 'Please select a patient.',
   }),
-  amount: z.coerce.number().gt(0, { message: 'Please enter an amount greater than $0.' }),
+  amount: z.coerce.number().gt(0, { message: 'Please enter an amount greater than R0.' }),
   status: z.enum(['pending', 'paid'], {
     invalid_type_error: 'Please select an invoice status.',
   }),
@@ -26,7 +27,7 @@ const CreateInvoice = FormSchema.omit({ id: true, date: true });
 
 export type State = {
   errors?: {
-    customerId?: string[];
+    patientId?: string[];
     amount?: string[];
     status?: string[];
   };
@@ -35,7 +36,7 @@ export type State = {
 
 export async function createInvoice(prevState: State, formData: FormData) {
     const validatedFields = CreateInvoice.safeParse({
-    customerId: formData.get('customerId'),
+    patientId: formData.get('patientId'),
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
@@ -47,16 +48,16 @@ export async function createInvoice(prevState: State, formData: FormData) {
     };
   }
 
-  const { customerId, amount, status } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const { patientId, amount, status } = validatedFields.data;
+  const amountInRands = Math.round(amount);
   const date = new Date().toISOString().split('T')[0];
   // Test it out:
 //   console.log(rawFormData);
 
 try {
     await sql`
-      INSERT INTO invoices (customer_id, amount, status, date)
-      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+      INSERT INTO invoices (patient_id, amount, status, date)
+      VALUES (${patientId}, ${amountInRands}, ${status}, ${date})
     `;
   } catch (error) {
     // We'll also log the error to the console for now
@@ -78,7 +79,7 @@ export async function updateInvoice(
   formData: FormData,
 ) {
   const validatedFields = UpdateInvoice.safeParse({
-    customerId: formData.get('customerId'),
+    patientId: formData.get('patientId'),
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
@@ -90,13 +91,14 @@ export async function updateInvoice(
     };
   }
  
-  const { customerId, amount, status } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const { patientId, amount, status } = validatedFields.data;
+  // Amounts are stored in whole Rands (the column is an integer).
+  const amountInRands = Math.round(amount);
  
   try {
     await sql`
       UPDATE invoices
-      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+      SET patient_id = ${patientId}, amount = ${amountInRands}, status = ${status}
       WHERE id = ${id}
     `;
   } catch (error) {
@@ -279,34 +281,42 @@ function parseAppointment(formData: FormData) {
   })
 }
 
+/**
+ * Appointment writes go through the raw pooler connection (which bypasses
+ * RLS), so appointmentScope() is re-applied in the WHERE clause: staff can
+ * only touch their own bookings, the owner can manage every appointment in
+ * the practice. user_id is always stamped explicitly because there is no
+ * auth.uid() on a plain SQL connection.
+ */
 export async function createAppointment(formData: FormData) {
   const a = parseAppointment(formData)
-  const supabase = await createClient()
-  const { error } = await supabase.from('appointments').insert({
-    patient_id: a.patient_id,
-    starts_at: fromDateTimeLocal(a.starts_at),
-    status: a.status,
-  })
-  if (error) throw new Error(`${error.code}: ${error.message}`)
+  const ctx = await getSessionContext()
+  if (!ctx) throw new Error('Not authenticated.')
+  await sql`
+    INSERT INTO appointments (patient_id, starts_at, status, user_id)
+    SELECT ${a.patient_id}, ${fromDateTimeLocal(a.starts_at)}, ${a.status}, ${ctx.userId}
+    WHERE EXISTS (SELECT 1 FROM patients WHERE id = ${a.patient_id})`
   revalidatePath('/dashboard/appointments')
   redirect('/dashboard/appointments')
 }
 
 export async function updateAppointment(id: string, formData: FormData) {
   const a = parseAppointment(formData)
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('appointments')
-    .update({ patient_id: a.patient_id, starts_at: fromDateTimeLocal(a.starts_at), status: a.status })
-    .eq('id', id)
-  if (error) throw new Error(`${error.code}: ${error.message}`)
+  const ctx = await getSessionContext()
+  if (!ctx) throw new Error('Not authenticated.')
+  await sql`
+    UPDATE appointments
+    SET patient_id = ${a.patient_id},
+        starts_at = ${fromDateTimeLocal(a.starts_at)},
+        status = ${a.status}
+    WHERE id = ${id} AND ${appointmentScope(ctx)}`
   revalidatePath('/dashboard/appointments')
   redirect('/dashboard/appointments')
 }
 
 export async function deleteAppointment(id: string) {
-  const supabase = await createClient()
-  const { error } = await supabase.from('appointments').delete().eq('id', id)
-  if (error) throw new Error(`${error.code}: ${error.message}`)
+  const ctx = await getSessionContext()
+  if (!ctx) throw new Error('Not authenticated.')
+  await sql`DELETE FROM appointments WHERE id = ${id} AND ${appointmentScope(ctx)}`
   revalidatePath('/dashboard/appointments')
 }
