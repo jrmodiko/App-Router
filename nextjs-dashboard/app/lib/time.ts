@@ -17,3 +17,24 @@ export function formatSA(iso: string): string {
     timeZone: ZONE, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 }
+
+// 'YYYY-MM-DD' calendar-day key in the practice timezone (never UTC).
+export function saDateKey(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(iso))
+}
+
+// 'HH:mm' start time in the practice timezone.
+export function saTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-ZA', {
+    timeZone: ZONE, hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
+// Today's date key in the practice timezone.
+export function saTodayKey(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now)
+}

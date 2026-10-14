@@ -26,7 +26,7 @@ export default function EditInvoiceForm({
   // return <form action={updateInvoiceWithId}>{/* ... */}</form>;
   return (
     <form action={formAction}>
-      <div className="rounded-md bg-gray-50 p-4 md:p-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
         {/* Patient Name */}
         <div className="mb-4">
           <label htmlFor="patient" className="mb-2 block text-sm font-medium">

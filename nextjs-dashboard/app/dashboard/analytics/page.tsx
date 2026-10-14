@@ -19,24 +19,22 @@ export const dynamic = 'force-dynamic'
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl bg-gray-50 p-2 shadow-sm">
-      <div className="p-4">
-        <h3 className="text-sm font-medium text-gray-700">{label}</h3>
-      </div>
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <h3 className="text-sm font-medium text-gray-500">{label}</h3>
       <p
-        className={`${lusitana.className} truncate rounded-xl bg-white px-4 py-6 text-center text-2xl`}
+        className={`${lusitana.className} mt-4 truncate text-2xl font-semibold text-gray-900`}
       >
         {value}
       </p>
-      {hint && <p className="px-4 pb-3 pt-2 text-center text-xs text-gray-500">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </div>
   )
 }
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-md border p-4">
-      <h2 className="mb-4 font-semibold">{title}</h2>
+    <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <h2 className="mb-4 font-semibold text-gray-900">{title}</h2>
       {children}
     </section>
   )

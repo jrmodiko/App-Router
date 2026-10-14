@@ -1,24 +1,26 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 /**
- * Owner-only "Booked by" filter for the appointments list. Selecting a user
- * updates the `user` search param while preserving the active status filter.
+ * Owner-only "Booked by" filter for the appointments page. Selecting a user
+ * updates the `user` search param while preserving the active status, view
+ * and month filters.
  */
 export default function BookerFilter({
   bookers,
   value,
+  baseParams = {},
 }: {
   bookers: { id: string; email: string | null }[]
   value?: string
+  baseParams?: Record<string, string>
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const handleChange = (next: string) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(baseParams)
     if (next) params.set('user', next)
     else params.delete('user')
     const qs = params.toString()

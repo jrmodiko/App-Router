@@ -21,7 +21,7 @@ export default function EditAppointmentForm({
   const update = updateAppointment.bind(null, appointment.id)
   return (
     <form action={update}>
-      <div className="rounded-md bg-gray-50 p-4 md:p-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-4">
           <label htmlFor="patient_id" className="mb-2 block text-sm font-medium">Patient</label>
           <div className="relative">

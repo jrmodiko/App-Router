@@ -418,6 +418,60 @@ export async function fetchPatientOptions(): Promise<PatientField[]> {
   return data
 }
 
+export interface CalendarAppointment {
+  id: string;
+  patient_name: string;
+  starts_at: string;
+  status: 'booked' | 'done' | 'no_show';
+  booked_by: string | null;
+}
+
+/**
+ * Every appointment in one calendar month, grouped by the practice's
+ * timezone (Africa/Johannesburg days, not UTC days). Scoped to the caller
+ * exactly like fetchAppointments(): staff only see their own bookings,
+ * the owner sees the whole practice. Pass the same status/user filters so
+ * the calendar grid always matches the list view.
+ */
+export async function fetchCalendarAppointments(
+  year: number,
+  month: number,
+  opts: { status?: AppointmentStatusFilter; userId?: string } = {},
+): Promise<CalendarAppointment[]> {
+  const ctx = await getSessionContext();
+  const { status, userId } = opts;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  const monthStart = `${year}-${pad(month)}-01`;
+  const nextStart = `${next.y}-${pad(next.m)}-01`;
+
+  const statusParam = status ?? null;
+  const userParam = userId ?? null;
+
+  try {
+    const data = await sql<CalendarAppointment[]>`
+      SELECT
+        appointments.id,
+        patients.full_name AS patient_name,
+        appointments.starts_at,
+        appointments.status,
+        auth.users.email AS booked_by
+      FROM appointments
+      JOIN patients ON patients.id = appointments.patient_id
+      LEFT JOIN auth.users ON auth.users.id = appointments.user_id
+      WHERE ${appointmentScope(ctx)}
+        AND (appointments.starts_at AT TIME ZONE 'Africa/Johannesburg')::date >= ${monthStart}::date
+        AND (appointments.starts_at AT TIME ZONE 'Africa/Johannesburg')::date < ${nextStart}::date
+        AND (${statusParam}::text IS NULL OR appointments.status = ${statusParam})
+        AND (${userParam}::text IS NULL OR appointments.user_id = ${userParam}::uuid)
+      ORDER BY appointments.starts_at ASC`;
+    return data;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch calendar appointments.');
+  }
+}
+
 export async function fetchAppointmentById(id: string) {
   const ctx = await getSessionContext()
   const data = await sql<{

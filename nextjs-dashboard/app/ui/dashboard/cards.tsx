@@ -49,15 +49,33 @@ export function Card({
 }) {
   const Icon = iconMap[type];
 
+  const accents: Record<typeof type, string> = {
+    collected: 'from-emerald-500 to-emerald-600 shadow-emerald-600/25',
+    pending: 'from-amber-500 to-amber-600 shadow-amber-600/25',
+    invoices: 'from-blue-500 to-blue-600 shadow-blue-600/25',
+    patients: 'from-sky-500 to-blue-600 shadow-blue-600/25',
+  };
+
   return (
-    <div className="rounded-xl bg-gray-50 p-2 shadow-sm">
-      <div className="flex p-4">
-        {Icon ? <Icon className="h-5 w-5 text-gray-700" /> : null}
-        <h3 className="ml-2 text-sm font-medium">{title}</h3>
+    <div className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-50/70 transition-transform group-hover:scale-125"
+      />
+      <div className="relative flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+          {title}
+        </h3>
+        {Icon ? (
+          <span
+            className={`bg-gradient-to-br ${accents[type]} rounded-xl p-2.5 text-white shadow-md`}
+          >
+            <Icon className="h-5 w-5" />
+          </span>
+        ) : null}
       </div>
       <p
-        className={`${lusitana.className}
-          truncate rounded-xl bg-white px-4 py-8 text-center text-2xl`}
+        className={`${lusitana.className} relative mt-4 truncate text-2xl font-semibold text-gray-900`}
       >
         {value}
       </p>

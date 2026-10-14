@@ -13,7 +13,7 @@ export default function EditForm({ patient }: { patient: Patient }) {
 
   return (
     <form action={formAction}>
-      <div className="rounded-md bg-gray-50 p-4 md:p-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
         <div className="mb-4">
           <label htmlFor="full_name" className="mb-2 block text-sm font-medium">Full name</label>
           <input id="full_name" name="full_name" type="text" defaultValue={patient.full_name}

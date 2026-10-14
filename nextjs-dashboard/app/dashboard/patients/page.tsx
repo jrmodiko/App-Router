@@ -18,8 +18,9 @@ export default async function Page() {
       {patients.length === 0 ? (
         <p className="mt-6 text-sm text-gray-500">No patients yet. Add the first one.</p>
       ) : (
-        <table className="mt-6 min-w-full text-gray-900">
-          <thead className="text-left text-sm font-normal">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <table className="min-w-full text-gray-900">
+          <thead className="bg-gray-50 text-left text-sm font-normal">
             <tr>
               <th className="px-4 py-3 font-medium">Full name</th>
               <th className="px-3 py-3 font-medium">Phone</th>
@@ -43,6 +44,7 @@ export default async function Page() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

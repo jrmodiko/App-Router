@@ -36,7 +36,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       <h1 className="mb-6 text-2xl">Edit patient</h1>
       <EditForm patient={patient} />
 
-      <section className="mt-6 rounded-md bg-gray-50 p-4">
+      <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <h2 className="mb-2 text-sm font-medium">Patient file</h2>
         {fileUrl ? (
           <a
